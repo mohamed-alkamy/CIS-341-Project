@@ -25,7 +25,8 @@ except ImportError:
 
 VERSION = "0.1.0"
 
-USAGE_TEXT = f"""
+def show_help():
+    help_text = f"""
 USAGE: python3 main.py [OPTIONS]
 
 DESCRIPTION
@@ -55,11 +56,9 @@ EXIT CODES
   3 permission error
   4 runtime error
 """
+    print(help_text)
 
-def print_usage():
-    print(USAGE_TEXT)
-
-def parse_args():
+def get_args():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--once", action="store_true")
     parser.add_argument("--service", action="store_true")
@@ -71,73 +70,81 @@ def parse_args():
     parser.add_argument("-h", "--help", action="store_true")
     return parser.parse_args()
 
-def merge_overrides(cfg, overrides):
-    for o in overrides:
-        if "=" not in o:
+def apply_overrides(config_dict, overrides_list):
+    for item in overrides_list:
+        if "=" not in item:
             continue
-        k, v = o.split("=", 1)
-        cfg[k.strip()] = v.strip()
+        key, val = item.split("=", 1)
+        config_dict[key.strip()] = val.strip()
 
-def load_config(path, overrides):
+def get_config(config_path, override_list):
     if config_module and hasattr(config_module, "load_config"):
         try:
-            cfg = config_module.load_config(path)
+            config_dict = config_module.load_config(config_path)
         except Exception:
             sys.exit(2)
     else:
-        cfg = {
+        config_dict = {
             "log_directory": "./log",
             "max_folder_size_mb": "100",
             "zip_schedule_days": "2",
             "zip_retention_days": "14",
             "log_file": "./app.log",
         }
-    merge_overrides(cfg, overrides)
-    return cfg
+    apply_overrides(config_dict, override_list)
+    return config_dict
 
-def main():
-    print_usage()
-    args = parse_args()
-    if args.help:
+def run_program():
+    show_help()
+    arguments = get_args()
+    
+    if arguments.help:
         sys.exit(0)
-    if args.version:
+    
+    if arguments.version:
         print(f"course-log-rotation version {VERSION}")
         sys.exit(0)
+    
     try:
-        cfg = load_config(args.config_file, args.override)
+        configuration = get_config(arguments.config_file, arguments.override)
     except SystemExit:
         raise
+    
     if permissions_module and hasattr(permissions_module, "ensure_allowed_user"):
         try:
             permissions_module.ensure_allowed_user()
         except PermissionError:
             sys.exit(3)
+    
     if logger_setup_module and hasattr(logger_setup_module, "init"):
-        logger_setup_module.init(cfg.get("log_file", "./app.log"))
-    if args.install_service:
+        logger_setup_module.init(configuration.get("log_file", "./app.log"))
+    
+    if arguments.install_service:
         try:
             import service as service_module
         except ImportError:
             service_module = None
+        
         if service_module and hasattr(service_module, "install_systemd_unit"):
-            service_module.install_systemd_unit(args.service_name, cfg, main_entry=Path(__file__).absolute())
+            service_module.install_systemd_unit(arguments.service_name, configuration, main_entry=Path(__file__).absolute())
             sys.exit(0)
         else:
             sys.exit(1)
+    
     try:
-        if args.once:
+        if arguments.once:
             if scheduler_module and hasattr(scheduler_module, "run_once"):
-                scheduler_module.run_once(cfg)
+                scheduler_module.run_once(configuration)
             else:
                 print("scheduler not implemented")
-        elif args.service:
+        elif arguments.service:
             if scheduler_module and hasattr(scheduler_module, "run_service_loop"):
-                scheduler_module.run_service_loop(cfg)
+                scheduler_module.run_service_loop(configuration)
             else:
                 print("scheduler not implemented")
         else:
             if scheduler_module and hasattr(scheduler_module, "run_once"):
-                scheduler_module.run_once(cfg)
+                scheduler_module.run_once(configuration)
             else:
                 print("no mode selected")
                 sys.exit(1)
@@ -146,7 +153,8 @@ def main():
     except Exception:
         traceback.print_exc()
         sys.exit(4)
+    
     sys.exit(0)
 
 if __name__ == "__main__":
-    main()
+    run_program()
