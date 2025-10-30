@@ -55,7 +55,7 @@ def expand_paths(cfg, base) -> None:
     for key in ("log_directory", "log_file"):
         if key not in cfg or not cfg[key]:
             continue
-        val = cfgp[key]
+        val = cfg[key]
         expanded = os.paths.expandvars(os.path.expanduser(val))
         p = Path(expanded)
         if not p.is_absolute():
@@ -88,8 +88,8 @@ def merge_overrides(cfg, overrides):
         merged[key.strip()] = val.strip()
     return merged
 
-def load_config(path):
-    cfg: dict(DEFAULTS)
+def load_config(path=None):
+    cfg = DEFAULTS.copy()
     target = Path(path or "log.cfg")
     base_dir = target.parent if target.parent.as_posix() not in ("", ".") else Path.cwd()
     if target.exists() and target.is_file():
