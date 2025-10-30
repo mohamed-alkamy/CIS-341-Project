@@ -1,14 +1,12 @@
-# scheduler.py
+
 import time
 import threading
 from datetime import datetime, timedelta
 
 from config import load_config
 from logger_setup import get_logger
-from log_rotation import rotate_logs  # make sure log_rotation.py is in the same folder
+from log_rotation import rotate_logs  
 
-# Initialize config and logger
-cfg = load_config("log.cfg")
 logger = get_logger()
 
 def seconds_until_next_run(every_n_days=2, run_hour=0, run_minute=0):
@@ -30,28 +28,40 @@ def schedule_periodic(func, every_n_days=2):
     def _run_and_reschedule():
         try:
             logger.info("Starting scheduled log rotation job")
-            func(cfg)
+            func(load_config("log.cfg"))
             logger.info("Log rotation job finished")
         except Exception as e:
             logger.error("Error in scheduled job: %s", e)
         finally:
-            # Compute seconds until next run and reschedule
             s = seconds_until_next_run(every_n_days)
             logger.info("Next run scheduled in %.2f hours", s / 3600)
             threading.Timer(s, _run_and_reschedule).start()
     
-    # Schedule first run
     initial_delay = seconds_until_next_run(every_n_days)
     logger.info("First run scheduled in %.2f hours", initial_delay / 3600)
     threading.Timer(initial_delay, _run_and_reschedule).start()
 
-if __name__ == "__main__":
-    # Schedule the log rotation
-    schedule_periodic(rotate_logs, every_n_days=int(cfg.get("zip_schedule_days", 2)))
 
-    # Keep the main thread alive
+def run_once(configuration: dict):
+    """Run a single log rotation using the provided configuration."""
+    try:
+        logger.info("Running single log rotation")
+        rotate_logs(configuration)
+        logger.info("Single run completed")
+    except Exception as exc:
+        logger.error("Error during single run: %s", exc)
+
+
+def run_service_loop(configuration: dict):
+    """Run as a long-running service, rotating every N days at midnight."""
+    every = int(configuration.get("zip_schedule_days", 2))
+    schedule_periodic(rotate_logs, every_n_days=every)
     try:
         while True:
-            time.sleep(3600)  # Sleep in 1-hour increments
+            time.sleep(3600)
     except KeyboardInterrupt:
-        logger.info("Scheduler stopped by user")
+        logger.info("Service loop interrupted by user")
+
+if __name__ == "__main__":
+    cfg = load_config("log.cfg")
+    run_service_loop(cfg)

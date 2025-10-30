@@ -38,7 +38,7 @@ def from_configparser(path: Path) -> dict:
             parser.read_file(fh)
     except Exception:
         return {}
-    items = dict[str, str] = {}
+    items = {}
     for section in ("log_rotation", "default", "defaults"):
         if parser.has_section(section):
             for k, v in parser[section].items():
@@ -47,18 +47,19 @@ def from_configparser(path: Path) -> dict:
     for k, v in parser.defaults().items():
         if k not in items:
             items[k] = v
-            return items
+
+    return items
 
 def expand_paths(cfg: dict, base: Path) -> None:
     for key in ("log_directory", "log_file"):
         val = cfg.get(key)
         if not val:
             continue
-        expanded = os.paths.expandvars(os.path.expanduser(val))
+        expanded = os.path.expandvars(os.path.expanduser(val))
         p = Path(expanded)
         if not p.is_absolute():
             p = (base / expanded).resolve()
-            cfg[key] = str(p)
+        cfg[key] = str(p)
             
 def validate(cfg):
     required_keys = {

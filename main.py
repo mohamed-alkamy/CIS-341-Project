@@ -95,10 +95,10 @@ def get_config(config_path, override_list):
     return config_dict
 
 def run_program():
-    show_help()
     arguments = get_args()
     
     if arguments.help:
+        show_help()
         sys.exit(0)
     
     if arguments.version:
