@@ -29,7 +29,7 @@ def parse_key_value_lines(text):
         parsed[key.strip()] = value.strip()
     return parsed
 
-def from_configparser(path):
+def from_configparser(path: Path) -> dict:
     if configparser is None:
         return {}
     parser = configparser.ConfigParser()
@@ -38,24 +38,22 @@ def from_configparser(path):
             parser.read_file(fh)
     except Exception:
         return {}
-    items = {}
-    if "log_rotation" in parser:
-        for k, v in parser ["log_rotation"].items():
-            items[k] = v
-    if "defaults" in parser:
-        for k, v in parser["defaults"].items():
-            items[k] = v
+    items = dict[str, str] = {}
+    for section in ("log_rotation", "default", "defaults"):
+        if parser.has_section(section):
+            for k, v in parser[section].items():
+                items[k] = v
     
     for k, v in parser.defaults().items():
         if k not in items:
             items[k] = v
             return items
 
-def expand_paths(cfg, base) -> None:
+def expand_paths(cfg: dict, base: Path) -> None:
     for key in ("log_directory", "log_file"):
-        if key not in cfg or not cfg[key]:
+        val = cfg.get(key)
+        if not val:
             continue
-        val = cfg[key]
         expanded = os.paths.expandvars(os.path.expanduser(val))
         p = Path(expanded)
         if not p.is_absolute():
