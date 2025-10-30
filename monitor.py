@@ -2,13 +2,7 @@ import os
 import glob
 from datetime import datetime
 
-"""
-This module keeps track of the log folder used by the project.
-It checks how much space the folder is taking up and gives a warning
-if it goes over a certain limit. It also looks at any zipped log files
-and reports how many there are and which one is the largest. The goal
-is to make sure logs are managed properly and don’t fill up the system.
-"""
+
 
 class LogMonitor:
     

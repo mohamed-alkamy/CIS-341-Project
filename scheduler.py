@@ -10,9 +10,7 @@ from log_rotation import rotate_logs
 logger = get_logger()
 
 def seconds_until_next_run(every_n_days=2, run_hour=0, run_minute=0):
-    """
-    Calculate seconds until next scheduled run at midnight every `every_n_days`.
-    """
+   
     now = datetime.now()
     today_run = now.replace(hour=run_hour, minute=run_minute, second=0, microsecond=0)
     if now < today_run:
@@ -22,9 +20,7 @@ def seconds_until_next_run(every_n_days=2, run_hour=0, run_minute=0):
     return max(0, (next_run - now).total_seconds())
 
 def schedule_periodic(func, every_n_days=2):
-    """
-    Schedule a function to run every N days at midnight.
-    """
+
     def _run_and_reschedule():
         try:
             logger.info("Starting scheduled log rotation job")
@@ -43,7 +39,7 @@ def schedule_periodic(func, every_n_days=2):
 
 
 def run_once(configuration: dict):
-    """Run a single log rotation using the provided configuration."""
+
     try:
         logger.info("Running single log rotation")
         rotate_logs(configuration)
@@ -53,7 +49,6 @@ def run_once(configuration: dict):
 
 
 def run_service_loop(configuration: dict):
-    """Run as a long-running service, rotating every N days at midnight."""
     every = int(configuration.get("zip_schedule_days", 2))
     schedule_periodic(rotate_logs, every_n_days=every)
     try:
